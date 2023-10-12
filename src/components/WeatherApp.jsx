@@ -6,7 +6,6 @@ import HourlyForecast from "./HourlyForecast";
 import TempToggle from './TempToggle';
 import SearchInput from './SearchInput';
 import CurrentWeatherDetails from './CurrentWeatherDetails';
-import axios from 'axios';
 import DailyForecast from './DailyForecast';
 import { Tab } from '@headlessui/react';
 import DateTime from './DateTime';
@@ -22,15 +21,33 @@ const WeatherApp = () => {
   const [ipAddress, setIPAddress] = useState('');
 
   useEffect(() => {
-    axios.get('https://api.ipify.org?format=json')
-      .then((response) => {
-        const { ip } = response.data;
-        setIPAddress(ip);
-      })
-      .catch((error) => {
-        console.error('Error fetching IP address:', error);
-      });
+    const handleJsonpResponse = (data) => {
+      setIPAddress(data.ip);
+    };
+  
+    const callbackName = `jsonpCallback_${Date.now()}`;
+  
+    const script = document.createElement('script');
+    script.src = `https://api.ipify.org?format=json&callback=${callbackName}`;
+  
+    const handleScriptLoad = () => {
+      script.remove();  
+      delete window[callbackName]; 
+    };
+  
+    window[callbackName] = handleJsonpResponse;
+  
+    script.addEventListener('load', handleScriptLoad);
+  
+    document.body.appendChild(script);
+  
+    return () => {
+      script.removeEventListener('load', handleScriptLoad);
+      delete window[callbackName];
+      script.remove();
+    };
   }, []);
+  
 
   const handleSelect = (city) => {    
       setSelectedCity(city);
